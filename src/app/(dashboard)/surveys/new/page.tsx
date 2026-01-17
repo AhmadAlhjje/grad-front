@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useCreateSurvey, useProjects, useAddQuestion } from '@/hooks';
 import { PageHeader } from '@/components/layout';
-import { Card, CardHeader, CardFooter, Button, Input, Textarea, Select } from '@/components/ui';
+import { Card, CardHeader, CardFooter, Button, Input, Textarea, Select, Loading } from '@/components/ui';
 import { QuestionBuilder } from '@/features/surveys/components';
 import type { Question, CreateQuestionData } from '@/types';
 
@@ -37,7 +37,7 @@ const typeOptions = [
   { value: 'feedback', label: 'تغذية راجعة' },
 ];
 
-export default function NewSurveyPage() {
+function NewSurveyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectIdFromUrl = searchParams.get('project');
@@ -316,5 +316,13 @@ export default function NewSurveyPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NewSurveyPage() {
+  return (
+    <Suspense fallback={<Loading text="جاري التحميل..." />}>
+      <NewSurveyContent />
+    </Suspense>
   );
 }

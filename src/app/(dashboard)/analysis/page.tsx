@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useProjects, useProjectAnalysis } from '@/hooks';
 import { PageHeader } from '@/components/layout';
@@ -80,7 +80,7 @@ const mockPrePostData = [
   { dimension: 'التواصل', pre: 2.6, post: 4.2 },
 ];
 
-export default function AnalysisPage() {
+function AnalysisContent() {
   const searchParams = useSearchParams();
   const projectIdFromUrl = searchParams.get('project');
   const [selectedProject, setSelectedProject] = useState(projectIdFromUrl || '');
@@ -360,5 +360,13 @@ export default function AnalysisPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AnalysisPage() {
+  return (
+    <Suspense fallback={<Loading text="جاري التحميل..." />}>
+      <AnalysisContent />
+    </Suspense>
   );
 }

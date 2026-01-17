@@ -4,7 +4,9 @@
       "Bash(npm install)",
       "Bash(npm run dev)",
       "Bash(npx tsc:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 10 bash -c 'cd \"\"c:\\\\Users\\\\LEGION\\\\Desktop\\\\grad front\"\" && npm run dev')"
     ]
   }
 }
