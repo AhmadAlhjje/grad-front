@@ -126,7 +126,7 @@ export default function ProjectsPage() {
             <Loading text="جاري تحميل المشاريع..." />
           </div>
         ) : error ? (
-          <ErrorState onRetry={() => refetch()} />
+          <ErrorState error={error} onRetry={() => refetch()} />
         ) : !data?.data?.length ? (
           <EmptyState
             title="لا توجد مشاريع"

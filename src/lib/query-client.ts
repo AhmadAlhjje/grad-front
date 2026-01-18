@@ -5,12 +5,14 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
-      retry: 3,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retry: false, // Disable automatic retry to see errors
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      throwOnError: false, // Don't throw errors, handle them in components
     },
     mutations: {
-      retry: 1,
+      retry: false, // Disable automatic retry for mutations
+      throwOnError: false,
     },
   },
 });

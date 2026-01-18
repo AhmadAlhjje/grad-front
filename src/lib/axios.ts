@@ -32,7 +32,15 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    // Handle 401 Unauthorized
+    // Log error for debugging
+    console.error('API Error:', {
+      status: error.response?.status,
+      message: error.message,
+      url: originalRequest?.url,
+      data: error.response?.data,
+    });
+
+    // Handle 401 Unauthorized - only try refresh once
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
@@ -52,22 +60,20 @@ apiClient.interceptors.response.use(
           }
           return apiClient(originalRequest);
         } catch (refreshError) {
-          // Refresh failed - clear tokens and redirect to login
+          // Refresh failed - clear tokens but DON'T redirect automatically
+          // Let the component handle the error and show appropriate message
           Cookies.remove('access_token');
           Cookies.remove('refresh_token');
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
-          }
+          console.error('Token refresh failed:', refreshError);
         }
       } else {
-        // No refresh token - redirect to login
+        // No refresh token - clear access token
         Cookies.remove('access_token');
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
-        }
+        console.warn('No refresh token available');
       }
     }
 
+    // Always reject with the error so components can handle it
     return Promise.reject(error);
   }
 );
