@@ -66,8 +66,8 @@ export interface RegisterData {
 // Project Types
 // ============================================
 
-export type ProjectStatus = 'draft' | 'active' | 'completed' | 'suspended';
-export type ProjectType = 'intervention' | 'research' | 'assessment' | 'monitoring';
+export type ProjectStatus = 'draft' | 'active' | 'completed' | 'archived';
+export type ProjectType = 'needs_assessment' | 'intervention' | 'evaluation' | 'mixed';
 
 export interface ProjectBudget {
   total: number;

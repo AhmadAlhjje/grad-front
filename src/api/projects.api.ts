@@ -12,7 +12,7 @@ export interface ProjectsListParams {
 }
 
 export interface UpdateProjectData extends Partial<CreateProjectData> {
-  status?: 'draft' | 'active' | 'completed' | 'suspended';
+  status?: 'draft' | 'active' | 'completed' | 'archived';
 }
 
 export const projectsApi = {

@@ -136,9 +136,9 @@ export function getSurveyTypeLabel(type: string): string {
 export function getProjectTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     intervention: 'تدخل',
-    research: 'بحث',
-    assessment: 'تقييم',
-    monitoring: 'رصد',
+    needs_assessment: 'دراسة احتياج',
+    evaluation: 'تقييم',
+    mixed: 'مختلط',
   };
   return labels[type] || type;
 }
@@ -151,7 +151,7 @@ export function getProjectStatusLabel(status: string): string {
     draft: 'مسودة',
     active: 'نشط',
     completed: 'مكتمل',
-    suspended: 'معلق',
+    archived: 'مؤرشف',
   };
   return labels[status] || status;
 }

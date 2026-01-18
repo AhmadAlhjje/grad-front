@@ -36,15 +36,15 @@ const statusOptions = [
   { value: 'draft', label: 'مسودة' },
   { value: 'active', label: 'نشط' },
   { value: 'completed', label: 'مكتمل' },
-  { value: 'suspended', label: 'معلق' },
+  { value: 'archived', label: 'مؤرشف' },
 ];
 
 const typeOptions = [
   { value: '', label: 'جميع الأنواع' },
   { value: 'intervention', label: 'تدخل' },
-  { value: 'research', label: 'بحث' },
-  { value: 'assessment', label: 'تقييم' },
-  { value: 'monitoring', label: 'رصد' },
+  { value: 'needs_assessment', label: 'دراسة احتياج' },
+  { value: 'evaluation', label: 'تقييم' },
+  { value: 'mixed', label: 'مختلط' },
 ];
 
 export default function ProjectsPage() {

@@ -1,7 +1,7 @@
 'use client';
 
-import { use } from 'react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { useProject, useProjectStatistics } from '@/hooks';
 import { PageHeader } from '@/components/layout';
 import {
@@ -27,12 +27,9 @@ import {
   CurrencyDollarIcon,
 } from '@heroicons/react/24/outline';
 
-interface ProjectDetailPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
-  const { id } = use(params);
+export default function ProjectDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
   const { data: project, isLoading, error, refetch } = useProject(id);
   const { data: statistics } = useProjectStatistics(id);
 
@@ -264,7 +261,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
       </div>
 
       {/* Quick Actions */}
-      <Card>
+      {/* <Card>
         <CardHeader title="إجراءات سريعة" />
         <div className="flex flex-wrap gap-3">
           <Link href={`/surveys?project=${id}`}>
@@ -280,7 +277,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
             <Button variant="outline">إنشاء تقرير</Button>
           </Link>
         </div>
-      </Card>
+      </Card> */}
     </div>
   );
 }

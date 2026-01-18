@@ -12,10 +12,10 @@ import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 const projectSchema = z.object({
   name: z.string().min(3, 'اسم المشروع يجب أن يكون 3 أحرف على الأقل'),
   description: z.string().min(10, 'الوصف يجب أن يكون 10 أحرف على الأقل'),
-  type: z.enum(['intervention', 'research', 'assessment', 'monitoring'], {
+  type: z.enum(['needs_assessment', 'intervention', 'evaluation', 'mixed'], {
     required_error: 'يرجى اختيار نوع المشروع',
   }),
-  status: z.enum(['draft', 'active', 'completed', 'suspended']).default('draft'),
+  status: z.enum(['draft', 'active', 'completed', 'archived']).default('draft'),
   startDate: z.string().min(1, 'تاريخ البدء مطلوب'),
   endDate: z.string().min(1, 'تاريخ الانتهاء مطلوب'),
   location: z.string().min(1, 'الموقع مطلوب'),
@@ -36,14 +36,16 @@ type ProjectFormData = z.infer<typeof projectSchema>;
 
 const typeOptions = [
   { value: 'intervention', label: 'تدخل' },
-  { value: 'research', label: 'بحث' },
-  { value: 'assessment', label: 'تقييم' },
-  { value: 'monitoring', label: 'رصد' },
+  { value: 'needs_assessment', label: 'دراسة احتياج' },
+  { value: 'evaluation', label: 'تقييم' },
+  { value: 'mixed', label: 'مختلط' },
 ];
 
 const statusOptions = [
   { value: 'draft', label: 'مسودة' },
   { value: 'active', label: 'نشط' },
+  { value: 'completed', label: 'مكتمل' },
+  { value: 'archived', label: 'مؤرشف' },
 ];
 
 export default function NewProjectPage() {
@@ -110,10 +112,24 @@ export default function NewProjectPage() {
 
   const onSubmit = async (data: ProjectFormData) => {
     try {
-      await createProject.mutateAsync(data);
+      // تحويل التواريخ لصيغة ISO 8601 الكاملة
+      const formattedData = {
+        ...data,
+        startDate: new Date(data.startDate).toISOString(),
+        endDate: new Date(data.endDate).toISOString(),
+        // تصفية القيم الفارغة من المصفوفات
+        targetGroups: data.targetGroups.filter((g) => g.trim() !== ''),
+        goals: {
+          short_term: data.goals.short_term.filter((g) => g.trim() !== ''),
+          long_term: data.goals.long_term.filter((g) => g.trim() !== ''),
+        },
+        tags: data.tags?.filter((t) => t.trim() !== '') || [],
+      };
+      console.log('Sending data:', JSON.stringify(formattedData, null, 2));
+      await createProject.mutateAsync(formattedData);
       router.push('/projects');
-    } catch {
-      // Error handled by mutation
+    } catch (error) {
+      console.error('Error creating project:', error);
     }
   };
 
