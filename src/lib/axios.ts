@@ -3,6 +3,10 @@ import Cookies from 'js-cookie';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
+// Debug: Log the API URL being used
+console.log('[Axios Config] API_URL:', API_URL);
+console.log('[Axios Config] NEXT_PUBLIC_API_URL env var:', process.env.NEXT_PUBLIC_API_URL);
+
 // Create axios instance
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -16,19 +20,42 @@ export const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = Cookies.get('access_token');
+
+    // Debug: Log every outgoing request
+    console.log('[Axios Request]', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      baseURL: config.baseURL,
+      fullURL: `${config.baseURL}${config.url}`,
+      data: config.data,
+      hasToken: !!token,
+      tokenPreview: token ? `${token.substring(0, 20)}...` : 'none',
+    });
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('[Axios Request] Authorization header set');
+    } else {
+      console.warn('[Axios Request] No access token found in cookies');
     }
     return config;
   },
   (error) => {
+    console.error('[Axios Request Error]', error);
     return Promise.reject(error);
   }
 );
 
 // Response interceptor - Handle errors and token refresh
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Extract data from the wrapper if it exists
+    if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+      console.log('[Axios Response] Unwrapping nested data structure');
+      response.data = response.data.data;
+    }
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 

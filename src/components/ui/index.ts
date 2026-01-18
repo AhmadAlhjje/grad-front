@@ -30,6 +30,7 @@ export { DataTable } from './data-table';
 export type { DataTableProps, Column } from './data-table';
 
 export { Spinner, Loading, Skeleton, CardSkeleton, TableSkeleton } from './loading';
+export { LoadingSpinner } from './LoadingSpinner';
 
 export { EmptyState, ErrorState } from './empty-state';
 

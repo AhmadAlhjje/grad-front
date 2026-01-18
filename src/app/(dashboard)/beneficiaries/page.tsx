@@ -2,6 +2,11 @@
 
 import { useState } from 'react';
 import { useProjects } from '@/hooks';
+import {
+  useBeneficiaries,
+  useBeneficiariesStatistics,
+  useCreateBeneficiary,
+} from '@/hooks/use-beneficiaries';
 import { PageHeader } from '@/components/layout';
 import {
   Card,
@@ -13,6 +18,8 @@ import {
   Button,
   Modal,
   Textarea,
+  LoadingSpinner,
+  EmptyState,
 } from '@/components/ui';
 import { BarChart, DonutChart } from '@/components/charts';
 import {
@@ -24,194 +31,136 @@ import {
   DocumentArrowDownIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
-
-// Mock beneficiaries data
-const mockBeneficiaries = [
-  {
-    id: '1',
-    name: 'أحمد محمد العلي',
-    email: 'ahmed@example.com',
-    phone: '0501234567',
-    gender: 'male' as const,
-    age: 28,
-    city: 'الرياض',
-    project: 'برنامج التدريب المهني',
-    status: 'active' as const,
-    joinDate: '2024-01-05',
-    surveysCompleted: 3,
-  },
-  {
-    id: '2',
-    name: 'فاطمة سعد الدوسري',
-    email: 'fatima@example.com',
-    phone: '0559876543',
-    gender: 'female' as const,
-    age: 24,
-    city: 'جدة',
-    project: 'برنامج التمكين الاقتصادي',
-    status: 'active' as const,
-    joinDate: '2024-01-10',
-    surveysCompleted: 2,
-  },
-  {
-    id: '3',
-    name: 'خالد عبدالله القحطاني',
-    email: 'khaled@example.com',
-    phone: '0543216789',
-    gender: 'male' as const,
-    age: 32,
-    city: 'الدمام',
-    project: 'برنامج التدريب المهني',
-    status: 'completed' as const,
-    joinDate: '2023-10-15',
-    surveysCompleted: 5,
-  },
-  {
-    id: '4',
-    name: 'نورة حمد الشمري',
-    email: 'noura@example.com',
-    phone: '0567891234',
-    gender: 'female' as const,
-    age: 26,
-    city: 'الرياض',
-    project: 'برنامج دعم التعليم',
-    status: 'active' as const,
-    joinDate: '2024-01-12',
-    surveysCompleted: 1,
-  },
-  {
-    id: '5',
-    name: 'محمد علي الغامدي',
-    email: 'mohammed@example.com',
-    phone: '0578901234',
-    gender: 'male' as const,
-    age: 30,
-    city: 'مكة',
-    project: 'برنامج التمكين الاقتصادي',
-    status: 'inactive' as const,
-    joinDate: '2023-09-20',
-    surveysCompleted: 4,
-  },
-];
-
-const statusConfig = {
-  active: { label: 'نشط', variant: 'success' as const },
-  completed: { label: 'أكمل البرنامج', variant: 'primary' as const },
-  inactive: { label: 'غير نشط', variant: 'default' as const },
-};
+import type { Beneficiary, CreateBeneficiaryData } from '@/api';
 
 const genderLabels = {
   male: 'ذكر',
   female: 'أنثى',
+  other: 'آخر',
 };
 
-const mockGenderData = [
-  { name: 'ذكور', value: 60, color: '#0ea5e9' },
-  { name: 'إناث', value: 40, color: '#ec4899' },
-];
-
-const mockAgeData = [
-  { range: '18-24', count: 35 },
-  { range: '25-34', count: 45 },
-  { range: '35-44', count: 15 },
-  { range: '45+', count: 5 },
-];
-
-const mockCityData = [
-  { city: 'الرياض', count: 120 },
-  { city: 'جدة', count: 85 },
-  { city: 'الدمام', count: 60 },
-  { city: 'مكة', count: 45 },
-  { city: 'المدينة', count: 30 },
-];
+const beneficiaryTypeLabels = {
+  individual: 'فرد',
+  family: 'أسرة',
+  organization: 'منظمة',
+  community: 'مجتمع',
+};
 
 export default function BeneficiariesPage() {
   const [selectedProject, setSelectedProject] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedType, setSelectedType] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState<Partial<CreateBeneficiaryData>>({});
 
-  const { data: projectsData } = useProjects({ limit: 100 });
+  // Fetch data from API
+  const { data: allProjects } = useProjects({});
+  const { data: beneficiaries, isLoading } = useBeneficiaries({
+    projectId: selectedProject || undefined,
+    beneficiaryType: selectedType || undefined,
+    city: selectedCity || undefined,
+  });
+  const { data: statistics } = useBeneficiariesStatistics(
+    selectedProject || undefined
+  );
+  const createMutation = useCreateBeneficiary();
+
+  const projects = allProjects || [];
 
   const projectOptions = [
     { value: '', label: 'جميع المشاريع' },
-    ...(projectsData?.data?.map((p) => ({
+    ...projects.map((p) => ({
       value: p._id,
       label: p.name,
-    })) || []),
+    })),
   ];
 
-  const statusOptions = [
-    { value: '', label: 'جميع الحالات' },
-    { value: 'active', label: 'نشط' },
-    { value: 'completed', label: 'أكمل البرنامج' },
-    { value: 'inactive', label: 'غير نشط' },
+  const typeOptions = [
+    { value: '', label: 'جميع الأنواع' },
+    { value: 'individual', label: 'فرد' },
+    { value: 'family', label: 'أسرة' },
+    { value: 'organization', label: 'منظمة' },
+    { value: 'community', label: 'مجتمع' },
   ];
 
-  const filteredBeneficiaries = mockBeneficiaries.filter((b) => {
-    if (selectedStatus && b.status !== selectedStatus) return false;
-    if (searchQuery && !b.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !b.email.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  // Get unique cities from beneficiaries for filter
+  const cities = beneficiaries
+    ? Array.from(new Set(beneficiaries.map((b) => b.city).filter(Boolean)))
+    : [];
+  const cityOptions = [
+    { value: '', label: 'جميع المدن' },
+    ...cities.map((city) => ({ value: city!, label: city! })),
+  ];
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ar-SA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  // Client-side search filtering
+  const filteredBeneficiaries =
+    beneficiaries?.filter((b) => {
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          b.name.toLowerCase().includes(query) ||
+          b.email?.toLowerCase().includes(query) ||
+          b.phone?.includes(query)
+        );
+      }
+      return true;
+    }) || [];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.project || !formData.beneficiaryType) {
+      return;
+    }
+
+    await createMutation.mutateAsync(formData as CreateBeneficiaryData);
+    setIsModalOpen(false);
+    setFormData({});
   };
 
   const columns = [
     {
       key: 'name',
       title: 'الاسم',
-      render: (value: string, row: typeof mockBeneficiaries[0]) => (
+      render: (value: string, row: Beneficiary) => (
         <div>
           <p className="font-medium text-secondary-900">{value}</p>
-          <p className="text-sm text-secondary-500">{row.email}</p>
+          {row.email && <p className="text-sm text-secondary-500">{row.email}</p>}
         </div>
+      ),
+    },
+    {
+      key: 'beneficiaryType',
+      title: 'النوع',
+      render: (value: keyof typeof beneficiaryTypeLabels) => (
+        <Badge variant="info">{beneficiaryTypeLabels[value]}</Badge>
       ),
     },
     {
       key: 'gender',
       title: 'الجنس',
-      render: (value: 'male' | 'female') => genderLabels[value],
+      render: (value?: 'male' | 'female' | 'other') =>
+        value ? genderLabels[value] : '-',
     },
     {
       key: 'age',
       title: 'العمر',
-      render: (value: number) => `${value} سنة`,
+      render: (value?: number) => (value ? `${value} سنة` : '-'),
     },
     {
       key: 'city',
       title: 'المدينة',
+      render: (value?: string) => value || '-',
     },
     {
-      key: 'project',
-      title: 'المشروع',
-    },
-    {
-      key: 'status',
-      title: 'الحالة',
-      render: (value: keyof typeof statusConfig) => (
-        <Badge variant={statusConfig[value].variant}>
-          {statusConfig[value].label}
-        </Badge>
-      ),
-    },
-    {
-      key: 'surveysCompleted',
-      title: 'الاستبيانات المكتملة',
-      render: (value: number) => (
-        <span className="font-medium">{value}</span>
-      ),
+      key: 'phone',
+      title: 'الهاتف',
+      render: (value?: string) => value || '-',
     },
     {
       key: 'actions',
       title: 'الإجراءات',
-      render: () => (
+      render: (_: unknown, row: Beneficiary) => (
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm">
             <EyeIcon className="h-4 w-4" />
@@ -226,6 +175,51 @@ export default function BeneficiariesPage() {
       ),
     },
   ];
+
+  // Prepare chart data from real statistics
+  const genderData = statistics?.genderDistribution
+    ? [
+        {
+          name: 'ذكور',
+          value: statistics.genderDistribution.male || 0,
+          color: '#0ea5e9',
+        },
+        {
+          name: 'إناث',
+          value: statistics.genderDistribution.female || 0,
+          color: '#ec4899',
+        },
+        {
+          name: 'آخر',
+          value: statistics.genderDistribution.other || 0,
+          color: '#94a3b8',
+        },
+      ].filter((item) => item.value > 0)
+    : [];
+
+  const typeData = statistics?.byType
+    ? [
+        { type: 'أفراد', count: statistics.byType.individual || 0 },
+        { type: 'أسر', count: statistics.byType.family || 0 },
+        { type: 'منظمات', count: statistics.byType.organization || 0 },
+        { type: 'مجتمعات', count: statistics.byType.community || 0 },
+      ].filter((item) => item.count > 0)
+    : [];
+
+  const cityData = statistics?.byCity
+    ? Object.entries(statistics.byCity)
+        .map(([city, count]) => ({ city, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5)
+    : [];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -246,64 +240,86 @@ export default function BeneficiariesPage() {
         }
       />
 
-      {/* Stats */}
+      {/* Stats from real data */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card className="text-center py-4">
           <UserGroupIcon className="h-8 w-8 text-primary-500 mx-auto mb-2" />
-          <p className="text-3xl font-bold text-primary-600">{mockBeneficiaries.length}</p>
+          <p className="text-3xl font-bold text-primary-600">
+            {statistics?.totalBeneficiaries || 0}
+          </p>
           <p className="text-sm text-secondary-600">إجمالي المستفيدين</p>
         </Card>
         <Card className="text-center py-4">
           <p className="text-3xl font-bold text-success-600">
-            {mockBeneficiaries.filter(b => b.status === 'active').length}
+            {statistics?.byType.individual || 0}
           </p>
-          <p className="text-sm text-secondary-600">مستفيدون نشطون</p>
+          <p className="text-sm text-secondary-600">أفراد</p>
         </Card>
         <Card className="text-center py-4">
-          <p className="text-3xl font-bold text-primary-600">
-            {mockBeneficiaries.filter(b => b.status === 'completed').length}
+          <p className="text-3xl font-bold text-blue-600">
+            {statistics?.byType.family || 0}
           </p>
-          <p className="text-sm text-secondary-600">أكملوا البرنامج</p>
+          <p className="text-sm text-secondary-600">أسر</p>
         </Card>
         <Card className="text-center py-4">
-          <p className="text-3xl font-bold text-secondary-600">
-            {mockBeneficiaries.reduce((acc, b) => acc + b.surveysCompleted, 0)}
+          <p className="text-3xl font-bold text-purple-600">
+            {statistics?.byType.organization || 0}
           </p>
-          <p className="text-sm text-secondary-600">إجمالي الردود</p>
+          <p className="text-sm text-secondary-600">منظمات</p>
         </Card>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <Card>
-          <CardHeader title="التوزيع حسب الجنس" />
-          <DonutChart
-            data={mockGenderData}
-            centerValue="340"
-            centerLabel="مستفيد"
-            height={200}
-            outerRadius={70}
-          />
-        </Card>
-        <Card>
-          <CardHeader title="التوزيع حسب العمر" />
-          <BarChart
-            data={mockAgeData}
-            xKey="range"
-            bars={[{ dataKey: 'count', name: 'العدد', color: '#0ea5e9' }]}
-            height={200}
-          />
-        </Card>
-        <Card>
-          <CardHeader title="التوزيع حسب المدينة" />
-          <BarChart
-            data={mockCityData}
-            xKey="city"
-            bars={[{ dataKey: 'count', name: 'العدد', color: '#22c55e' }]}
-            height={200}
-          />
-        </Card>
-      </div>
+      {/* Charts with real data */}
+      {statistics && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <Card>
+            <CardHeader title="التوزيع حسب الجنس" />
+            {genderData.length > 0 ? (
+              <DonutChart
+                data={genderData}
+                centerValue={statistics.totalBeneficiaries.toString()}
+                centerLabel="مستفيد"
+                height={200}
+                outerRadius={70}
+              />
+            ) : (
+              <div className="h-[200px] flex items-center justify-center text-secondary-400">
+                لا توجد بيانات
+              </div>
+            )}
+          </Card>
+          <Card>
+            <CardHeader title="التوزيع حسب النوع" />
+            {typeData.length > 0 ? (
+              <BarChart
+                data={typeData}
+                xKey="type"
+                bars={[{ dataKey: 'count', name: 'العدد', color: '#0ea5e9' }]}
+                height={200}
+              />
+            ) : (
+              <div className="h-[200px] flex items-center justify-center text-secondary-400">
+                لا توجد بيانات
+              </div>
+            )}
+          </Card>
+          <Card>
+            <CardHeader title="التوزيع حسب المدينة" />
+            {cityData.length > 0 ? (
+              <BarChart
+                data={cityData}
+                xKey="city"
+                bars={[{ dataKey: 'count', name: 'العدد', color: '#22c55e' }]}
+                height={200}
+              />
+            ) : (
+              <div className="h-[200px] flex items-center justify-center text-secondary-400">
+                لا توجد بيانات
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* Filters */}
       <Card className="mb-6">
@@ -318,10 +334,18 @@ export default function BeneficiariesPage() {
           </div>
           <div className="w-48">
             <Select
-              label="الحالة"
-              options={statusOptions}
-              value={selectedStatus}
-              onChange={setSelectedStatus}
+              label="النوع"
+              options={typeOptions}
+              value={selectedType}
+              onChange={setSelectedType}
+            />
+          </div>
+          <div className="w-48">
+            <Select
+              label="المدينة"
+              options={cityOptions}
+              value={selectedCity}
+              onChange={setSelectedCity}
             />
           </div>
           <div className="w-64">
@@ -336,27 +360,70 @@ export default function BeneficiariesPage() {
         </div>
       </Card>
 
-      {/* Beneficiaries Table */}
+      {/* Beneficiaries Table with real data */}
       <Card>
-        <CardHeader title="قائمة المستفيدين" subtitle={`${filteredBeneficiaries.length} مستفيد`} />
-        <DataTable columns={columns} data={filteredBeneficiaries} rowKey="id" />
+        <CardHeader
+          title="قائمة المستفيدين"
+          subtitle={`${filteredBeneficiaries.length} مستفيد`}
+        />
+        {filteredBeneficiaries.length > 0 ? (
+          <DataTable
+            columns={columns}
+            data={filteredBeneficiaries}
+            rowKey="_id"
+          />
+        ) : (
+          <EmptyState
+            title="لا توجد بيانات"
+            description="لم يتم العثور على مستفيدين. ابدأ بإضافة مستفيد جديد."
+            icon="users"
+          />
+        )}
       </Card>
 
       {/* Add Beneficiary Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setFormData({});
+        }}
         title="إضافة مستفيد جديد"
         size="lg"
       >
-        <form className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Input label="الاسم الكامل" placeholder="أدخل الاسم" required />
-            <Input label="البريد الإلكتروني" type="email" placeholder="example@email.com" />
+            <Input
+              label="الاسم الكامل"
+              placeholder="أدخل الاسم"
+              required
+              value={formData.name || ''}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
+            <Input
+              label="البريد الإلكتروني"
+              type="email"
+              placeholder="example@email.com"
+              value={formData.email || ''}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="رقم الهاتف" placeholder="05xxxxxxxx" />
-            <Input label="العمر" type="number" placeholder="25" />
+            <Input
+              label="رقم الهاتف"
+              placeholder="05xxxxxxxx"
+              value={formData.phone || ''}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            />
+            <Input
+              label="العمر"
+              type="number"
+              placeholder="25"
+              value={formData.age || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, age: parseInt(e.target.value) || undefined })
+              }
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Select
@@ -364,26 +431,76 @@ export default function BeneficiariesPage() {
               options={[
                 { value: 'male', label: 'ذكر' },
                 { value: 'female', label: 'أنثى' },
+                { value: 'other', label: 'آخر' },
               ]}
-              value=""
-              onChange={() => {}}
+              value={(formData.gender as string) || ''}
+              onChange={(value) =>
+                setFormData({ ...formData, gender: value as 'male' | 'female' | 'other' })
+              }
+            />
+            <Input
+              label="المدينة"
+              placeholder="الرياض"
+              value={formData.city || ''}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="نوع المستفيد"
+              options={[
+                { value: 'individual', label: 'فرد' },
+                { value: 'family', label: 'أسرة' },
+                { value: 'organization', label: 'منظمة' },
+                { value: 'community', label: 'مجتمع' },
+              ]}
+              value={(formData.beneficiaryType as string) || ''}
+              onChange={(value) =>
+                setFormData({
+                  ...formData,
+                  beneficiaryType: value as
+                    | 'individual'
+                    | 'family'
+                    | 'organization'
+                    | 'community',
+                })
+              }
               required
             />
-            <Input label="المدينة" placeholder="الرياض" />
+            <Select
+              label="المشروع"
+              options={projectOptions.slice(1)}
+              value={formData.project || ''}
+              onChange={(value) => setFormData({ ...formData, project: value })}
+              required
+            />
           </div>
-          <Select
-            label="المشروع"
-            options={projectOptions.slice(1)}
-            value=""
-            onChange={() => {}}
-            required
+          <Textarea
+            label="ملاحظات"
+            placeholder="أي ملاحظات إضافية..."
+            rows={2}
+            value={((formData.metadata as any)?.notes as string) || ''}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                metadata: { ...(formData.metadata || {}), notes: e.target.value },
+              })
+            }
           />
-          <Textarea label="ملاحظات" placeholder="أي ملاحظات إضافية..." rows={2} />
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setIsModalOpen(false);
+                setFormData({});
+              }}
+            >
               إلغاء
             </Button>
-            <Button type="submit">حفظ المستفيد</Button>
+            <Button type="submit" isLoading={createMutation.isPending}>
+              حفظ المستفيد
+            </Button>
           </div>
         </form>
       </Modal>

@@ -27,6 +27,7 @@ export interface ApiError {
 // ============================================
 
 export type UserRole = 'admin' | 'manager' | 'viewer';
+export type UserStatus = 'active' | 'inactive' | 'suspended';
 
 export interface User extends BaseEntity {
   name: string;
@@ -35,8 +36,10 @@ export interface User extends BaseEntity {
   organization?: string;
   department?: string;
   role: UserRole;
-  isActive: boolean;
+  status: UserStatus;
   avatar?: string;
+  lastLoginAt?: string;
+  emailVerified?: boolean;
 }
 
 export interface AuthResponse {

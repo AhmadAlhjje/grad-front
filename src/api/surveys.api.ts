@@ -32,8 +32,8 @@ export const surveysApi = {
    * Get all surveys
    * GET /surveys
    */
-  getAll: async (params?: SurveysListParams): Promise<PaginatedResponse<Survey>> => {
-    const { data } = await apiClient.get<PaginatedResponse<Survey>>('/surveys', { params });
+  getAll: async (params?: SurveysListParams): Promise<Survey[]> => {
+    const { data } = await apiClient.get<Survey[]>('/surveys', { params });
     return data;
   },
 

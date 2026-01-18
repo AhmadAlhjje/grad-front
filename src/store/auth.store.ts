@@ -26,7 +26,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       isAuthenticated: false,
-      isLoading: true,
+      isLoading: false,
 
       setUser: (user) =>
         set({
@@ -36,6 +36,13 @@ export const useAuthStore = create<AuthState>()(
         }),
 
       setTokens: (accessToken, refreshToken) => {
+        console.log('[Auth Store] Setting tokens:', {
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          accessTokenLength: accessToken?.length,
+          refreshTokenLength: refreshToken?.length,
+        });
+
         Cookies.set('access_token', accessToken, {
           expires: 1, // 1 day
           secure: process.env.NODE_ENV === 'production',
@@ -49,6 +56,14 @@ export const useAuthStore = create<AuthState>()(
             sameSite: 'strict',
           });
         }
+
+        // Verify tokens were set
+        const storedAccessToken = Cookies.get('access_token');
+        const storedRefreshToken = Cookies.get('refresh_token');
+        console.log('[Auth Store] Tokens stored verification:', {
+          accessTokenStored: !!storedAccessToken,
+          refreshTokenStored: !!storedRefreshToken,
+        });
       },
 
       clearAuth: () => {

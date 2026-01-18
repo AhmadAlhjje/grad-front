@@ -52,14 +52,21 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [type, setType] = useState('');
+  const itemsPerPage = 10;
 
-  const { data, isLoading, error, refetch } = useProjects({
-    page,
-    limit: 10,
+  const { data: allProjects, isLoading, error, refetch } = useProjects({
     search: search || undefined,
     status: status || undefined,
     type: type || undefined,
   });
+
+  // Client-side pagination
+  const projects = allProjects || [];
+  const totalProjects = projects.length;
+  const totalPages = Math.ceil(totalProjects / itemsPerPage);
+  const startIndex = (page - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedProjects = projects.slice(startIndex, endIndex);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +77,7 @@ export default function ProjectsPage() {
     <div>
       <PageHeader
         title="المشاريع"
-        subtitle={`إجمالي ${data?.total || 0} مشروع`}
+        subtitle={`إجمالي ${totalProjects} مشروع`}
         actions={
           <Link href="/projects/new">
             <Button leftIcon={<PlusIcon className="h-5 w-5" />}>
@@ -127,7 +134,7 @@ export default function ProjectsPage() {
           </div>
         ) : error ? (
           <ErrorState error={error} onRetry={() => refetch()} />
-        ) : !data?.data?.length ? (
+        ) : !paginatedProjects.length ? (
           <EmptyState
             title="لا توجد مشاريع"
             description="لم يتم العثور على أي مشاريع. ابدأ بإنشاء مشروع جديد."
@@ -152,7 +159,7 @@ export default function ProjectsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.data.map((project) => (
+                {paginatedProjects.map((project) => (
                   <TableRow key={project._id}>
                     <TableCell>
                       <div>
@@ -192,12 +199,12 @@ export default function ProjectsPage() {
               </TableBody>
             </Table>
 
-            {data.totalPages > 1 && (
+            {totalPages > 1 && (
               <Pagination
                 currentPage={page}
-                totalPages={data.totalPages}
-                totalItems={data.total}
-                itemsPerPage={10}
+                totalPages={totalPages}
+                totalItems={totalProjects}
+                itemsPerPage={itemsPerPage}
                 onPageChange={setPage}
               />
             )}

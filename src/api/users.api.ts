@@ -17,7 +17,7 @@ export interface UpdateUserData {
   organization?: string;
   department?: string;
   role?: 'admin' | 'manager' | 'viewer';
-  isActive?: boolean;
+  status?: 'active' | 'inactive' | 'suspended';
 }
 
 export interface UsersListParams {
@@ -25,7 +25,7 @@ export interface UsersListParams {
   limit?: number;
   search?: string;
   role?: string;
-  isActive?: boolean;
+  status?: string;
 }
 
 export const usersApi = {

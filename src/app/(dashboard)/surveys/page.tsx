@@ -54,20 +54,27 @@ export default function SurveysPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [type, setType] = useState('');
+  const itemsPerPage = 10;
 
-  const { data, isLoading, error, refetch } = useSurveys({
-    page,
-    limit: 10,
+  const { data: allSurveys, isLoading, error, refetch } = useSurveys({
     search: search || undefined,
     status: status || undefined,
     type: type || undefined,
   });
 
+  // Client-side pagination
+  const surveys = allSurveys || [];
+  const totalSurveys = surveys.length;
+  const totalPages = Math.ceil(totalSurveys / itemsPerPage);
+  const startIndex = (page - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedSurveys = surveys.slice(startIndex, endIndex);
+
   return (
     <div>
       <PageHeader
         title="الاستبيانات"
-        subtitle={`إجمالي ${data?.total || 0} استبيان`}
+        subtitle={`إجمالي ${totalSurveys} استبيان`}
         actions={
           <Link href="/surveys/new">
             <Button leftIcon={<PlusIcon className="h-5 w-5" />}>
@@ -121,7 +128,7 @@ export default function SurveysPage() {
           </div>
         ) : error ? (
           <ErrorState onRetry={() => refetch()} />
-        ) : !data?.data?.length ? (
+        ) : !paginatedSurveys.length ? (
           <EmptyState
             title="لا توجد استبيانات"
             description="لم يتم العثور على أي استبيانات. ابدأ بإنشاء استبيان جديد."
@@ -146,7 +153,7 @@ export default function SurveysPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.data.map((survey) => (
+                {paginatedSurveys.map((survey) => (
                   <TableRow key={survey._id}>
                     <TableCell>
                       <div>
@@ -206,12 +213,12 @@ export default function SurveysPage() {
               </TableBody>
             </Table>
 
-            {data.totalPages > 1 && (
+            {totalPages > 1 && (
               <Pagination
                 currentPage={page}
-                totalPages={data.totalPages}
-                totalItems={data.total}
-                itemsPerPage={10}
+                totalPages={totalPages}
+                totalItems={totalSurveys}
+                itemsPerPage={itemsPerPage}
                 onPageChange={setPage}
               />
             )}

@@ -46,3 +46,13 @@ export {
   useUpdateUser,
   useDeleteUser,
 } from './use-users';
+export {
+  useBeneficiaries,
+  useBeneficiariesStatistics,
+  useBeneficiariesByProject,
+  useBeneficiary,
+  useBeneficiariesCount,
+  useCreateBeneficiary,
+  useUpdateBeneficiary,
+  useDeleteBeneficiary,
+} from './use-beneficiaries';

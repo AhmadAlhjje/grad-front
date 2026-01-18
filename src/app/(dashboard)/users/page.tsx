@@ -268,8 +268,17 @@ export default function UsersPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.isActive ? 'success' : 'danger'} dot>
-                        {user.isActive ? 'نشط' : 'غير نشط'}
+                      <Badge
+                        variant={
+                          user.status === 'active' ? 'success' :
+                          user.status === 'inactive' ? 'danger' :
+                          'default'
+                        }
+                        dot
+                      >
+                        {user.status === 'active' ? 'نشط' :
+                         user.status === 'inactive' ? 'غير نشط' :
+                         'معلق'}
                       </Badge>
                     </TableCell>
                     <TableCell align="center">

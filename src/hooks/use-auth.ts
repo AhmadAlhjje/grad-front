@@ -26,14 +26,27 @@ export function useAuth() {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: (credentials: LoginCredentials) => authApi.login(credentials),
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      console.log('[useAuth] Login response received:', {
+        hasAccessToken: !!data.access_token,
+        hasRefreshToken: !!data.refresh_token,
+        hasUser: !!data.user,
+        userEmail: data.user?.email,
+      });
+
       setTokens(data.access_token, data.refresh_token);
       setUser(data.user);
       queryClient.setQueryData(queryKeys.auth.profile(), data.user);
       notify.success('تم تسجيل الدخول بنجاح');
+
+      // Small delay to ensure cookies are set before navigation
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      console.log('[useAuth] About to navigate to dashboard');
       router.push('/dashboard');
     },
     onError: (error) => {
+      console.error('[useAuth] Login error:', error);
       notify.error('فشل تسجيل الدخول', getErrorMessage(error));
     },
   });

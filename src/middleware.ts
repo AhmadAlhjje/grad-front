@@ -16,14 +16,22 @@ export function middleware(request: NextRequest) {
   // Check if route is public
   const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
 
-  // If no token and trying to access protected route
-  // if (!accessToken && !isPublicRoute && pathname !== '/') {
-  //   const loginUrl = new URL('/login', request.url);
-  //   loginUrl.searchParams.set('redirect', pathname);
-  //   return NextResponse.redirect(loginUrl);
-  // }
+  // Allow access to root path
+  if (pathname === '/') {
+    if (accessToken) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 
-  // If has token and trying to access public route
+  // If no token and trying to access protected route
+  if (!accessToken && !isPublicRoute) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // If has token and trying to access public route, redirect to dashboard
   if (accessToken && isPublicRoute) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }

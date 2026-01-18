@@ -5,6 +5,9 @@ export { projectsApi } from './projects.api';
 export { surveysApi } from './surveys.api';
 export { responsesApi } from './responses.api';
 export { analysisApi } from './analysis.api';
+export { dashboardApi } from './dashboard.api';
+export { activitiesApi } from './activities.api';
+export { beneficiariesApi } from './beneficiaries.api';
 
 // Types exports
 export type { CreateUserData, UpdateUserData, UsersListParams } from './users.api';
@@ -17,3 +20,17 @@ export type {
   ImpactEvaluationData,
   ComprehensiveAnalysisData,
 } from './analysis.api';
+export type {
+  Activity,
+  CreateActivityData,
+  UpdateActivityData,
+  ActivitiesListParams,
+  ActivityStatistics,
+} from './activities.api';
+export type {
+  Beneficiary,
+  CreateBeneficiaryData,
+  UpdateBeneficiaryData,
+  BeneficiariesListParams,
+  BeneficiaryStatistics,
+} from './beneficiaries.api';

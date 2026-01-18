@@ -20,8 +20,8 @@ export const projectsApi = {
    * Get all projects
    * GET /projects
    */
-  getAll: async (params?: ProjectsListParams): Promise<PaginatedResponse<Project>> => {
-    const { data } = await apiClient.get<PaginatedResponse<Project>>('/projects', { params });
+  getAll: async (params?: ProjectsListParams): Promise<Project[]> => {
+    const { data } = await apiClient.get<Project[]>('/projects', { params });
     return data;
   },
 
@@ -80,19 +80,19 @@ export const projectsApi = {
 
   /**
    * Add team member to project
-   * POST /projects/:projectId/team/:userId
+   * POST /projects/:id/team/:memberId
    */
-  addTeamMember: async (projectId: string, userId: string): Promise<Project> => {
-    const { data } = await apiClient.post<Project>(`/projects/${projectId}/team/${userId}`);
+  addTeamMember: async (projectId: string, memberId: string): Promise<Project> => {
+    const { data } = await apiClient.post<Project>(`/projects/${projectId}/team/${memberId}`);
     return data;
   },
 
   /**
    * Remove team member from project
-   * DELETE /projects/:projectId/team/:userId
+   * DELETE /projects/:id/team/:memberId
    */
-  removeTeamMember: async (projectId: string, userId: string): Promise<Project> => {
-    const { data } = await apiClient.delete<Project>(`/projects/${projectId}/team/${userId}`);
+  removeTeamMember: async (projectId: string, memberId: string): Promise<Project> => {
+    const { data } = await apiClient.delete<Project>(`/projects/${projectId}/team/${memberId}`);
     return data;
   },
 };

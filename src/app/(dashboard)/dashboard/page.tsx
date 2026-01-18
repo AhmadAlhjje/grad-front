@@ -1,66 +1,66 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '@/components/layout';
-import { Card, CardHeader, StatsCard, ProgressBar } from '@/components/ui';
-import { LineChart, BarChart, DonutChart, RadarChart } from '@/components/charts';
+import { Card, CardHeader, StatsCard, ProgressBar, LoadingSpinner } from '@/components/ui';
+import { DonutChart } from '@/components/charts';
+import { projectsApi, dashboardApi } from '@/api';
 import {
   FolderIcon,
   ClipboardDocumentListIcon,
   UserGroupIcon,
   ChartBarIcon,
-  ArrowTrendingUpIcon,
   CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 
-// Mock data for dashboard
-const kpiData = {
-  totalProjects: 24,
-  activeProjects: 8,
-  totalBeneficiaries: 1250,
-  totalSurveys: 45,
-  averageImpactScore: 78,
-  completionRate: 65,
-};
-
-const impactTrendData = [
-  { month: 'يناير', impact: 65, target: 70 },
-  { month: 'فبراير', impact: 68, target: 70 },
-  { month: 'مارس', impact: 72, target: 75 },
-  { month: 'أبريل', impact: 75, target: 75 },
-  { month: 'مايو', impact: 78, target: 80 },
-  { month: 'يونيو', impact: 82, target: 80 },
-];
-
-const projectsStatusData = [
-  { name: 'مكتملة', value: 12, color: '#22c55e' },
-  { name: 'نشطة', value: 8, color: '#0ea5e9' },
-  { name: 'معلقة', value: 2, color: '#f59e0b' },
-  { name: 'مسودة', value: 2, color: '#94a3b8' },
-];
-
-const prePostComparisonData = [
-  { name: 'المعرفة', pre: 2.8, post: 4.3 },
-  { name: 'المهارات', pre: 2.5, post: 4.1 },
-  { name: 'الثقة', pre: 2.3, post: 4.2 },
-  { name: 'التطبيق', pre: 2.0, post: 3.8 },
-];
-
-const impactDimensionsData = [
-  { dimension: 'اقتصادي', current: 75, target: 80 },
-  { dimension: 'اجتماعي', current: 82, target: 85 },
-  { dimension: 'تعليمي', current: 88, target: 90 },
-  { dimension: 'صحي', current: 70, target: 75 },
-  { dimension: 'بيئي', current: 65, target: 70 },
-];
-
-const recentProjects = [
-  { id: '1', name: 'مبادرة تمكين الشباب', status: 'active', progress: 75 },
-  { id: '2', name: 'برنامج التدريب المهني', status: 'active', progress: 60 },
-  { id: '3', name: 'دعم الأسر المنتجة', status: 'completed', progress: 100 },
-  { id: '4', name: 'توعية صحية مجتمعية', status: 'active', progress: 45 },
-];
-
 export default function DashboardPage() {
+  // Fetch dashboard stats
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: () => dashboardApi.getStats(),
+  });
+
+  // Fetch all projects for charts
+  const { data: projects, isLoading: projectsLoading } = useQuery({
+    queryKey: ['projects', 'all'],
+    queryFn: () => projectsApi.getAll(),
+  });
+
+  const isLoading = statsLoading || projectsLoading;
+
+  // Calculate project status distribution
+  const projectsList = projects || [];
+  const activeProjects = projectsList.filter((p) => p.status === 'active').length;
+  const completedProjects = projectsList.filter((p) => p.status === 'completed').length;
+  const draftProjects = projectsList.filter((p) => p.status === 'draft').length;
+  const suspendedProjects = projectsList.filter((p) => p.status === 'suspended').length;
+
+  // Projects status for donut chart
+  const projectsStatusData = [
+    { name: 'مكتملة', value: completedProjects, color: '#22c55e' },
+    { name: 'نشطة', value: activeProjects, color: '#0ea5e9' },
+    { name: 'معلقة', value: suspendedProjects, color: '#f59e0b' },
+    { name: 'مسودة', value: draftProjects, color: '#94a3b8' },
+  ].filter(item => item.value > 0);
+
+  // Recent projects (latest 4)
+  const recentProjects = projectsList.slice(0, 4).map((project) => ({
+    id: project._id,
+    name: project.name,
+    status: project.status,
+    progress: project.status === 'completed' ? 100 :
+              project.status === 'active' ? 60 :
+              project.status === 'draft' ? 20 : 45,
+  }));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
   return (
     <div>
       <PageHeader
@@ -72,114 +72,92 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
         <StatsCard
           title="إجمالي المشاريع"
-          value={kpiData.totalProjects}
+          value={stats?.totalProjects || 0}
           icon={<FolderIcon className="h-6 w-6 text-primary-600" />}
-          trend={{ value: 12, isPositive: true }}
           iconBgColor="bg-primary-100"
         />
         <StatsCard
           title="المشاريع النشطة"
-          value={kpiData.activeProjects}
+          value={stats?.activeProjects || 0}
           icon={<CheckCircleIcon className="h-6 w-6 text-success-600" />}
           iconBgColor="bg-success-50"
         />
         <StatsCard
-          title="المستفيدون"
-          value={kpiData.totalBeneficiaries.toLocaleString('ar-SA')}
-          icon={<UserGroupIcon className="h-6 w-6 text-blue-600" />}
-          trend={{ value: 8, isPositive: true }}
+          title="المشاريع المكتملة"
+          value={stats?.completedProjects || 0}
+          icon={<FolderIcon className="h-6 w-6 text-blue-600" />}
           iconBgColor="bg-blue-50"
         />
         <StatsCard
-          title="الاستبيانات"
-          value={kpiData.totalSurveys}
-          icon={<ClipboardDocumentListIcon className="h-6 w-6 text-purple-600" />}
+          title="المستفيدون"
+          value={stats?.totalBeneficiaries || 0}
+          icon={<UserGroupIcon className="h-6 w-6 text-purple-600" />}
           iconBgColor="bg-purple-50"
         />
         <StatsCard
-          title="درجة الأثر"
-          value={`${kpiData.averageImpactScore}%`}
-          icon={<ArrowTrendingUpIcon className="h-6 w-6 text-emerald-600" />}
-          trend={{ value: 5, isPositive: true }}
+          title="الاستبيانات"
+          value={stats?.totalSurveys || 0}
+          icon={<ClipboardDocumentListIcon className="h-6 w-6 text-emerald-600" />}
           iconBgColor="bg-emerald-50"
         />
         <StatsCard
           title="نسبة الإنجاز"
-          value={`${kpiData.completionRate}%`}
+          value={`${stats?.completionRate || 0}%`}
           icon={<ChartBarIcon className="h-6 w-6 text-orange-600" />}
           iconBgColor="bg-orange-50"
         />
       </div>
 
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Impact Trends */}
-        <Card className="lg:col-span-2">
-          <CardHeader
-            title="اتجاهات الأثر"
-            subtitle="مقارنة الأثر الفعلي بالمستهدف"
-          />
-          <LineChart
-            data={impactTrendData}
-            xKey="month"
-            lines={[
-              { dataKey: 'impact', name: 'الأثر الفعلي', color: '#0ea5e9' },
-              { dataKey: 'target', name: 'المستهدف', color: '#94a3b8', strokeWidth: 2 },
-            ]}
-            height={280}
-          />
-        </Card>
-
-        {/* Projects Status */}
+      {/* Projects Status Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <Card>
           <CardHeader
             title="حالة المشاريع"
             subtitle="توزيع المشاريع حسب الحالة"
           />
-          <DonutChart
-            data={projectsStatusData}
-            centerValue={kpiData.totalProjects}
-            centerLabel="مشروع"
-            height={280}
-            outerRadius={100}
-          />
-        </Card>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Pre/Post Comparison */}
-        <Card>
-          <CardHeader
-            title="مقارنة قبلي / بعدي"
-            subtitle="متوسط التقييمات قبل وبعد التدخل"
-          />
-          <BarChart
-            data={prePostComparisonData}
-            xKey="name"
-            bars={[
-              { dataKey: 'pre', name: 'قبل', color: '#94a3b8' },
-              { dataKey: 'post', name: 'بعد', color: '#0ea5e9' },
-            ]}
-            height={280}
-          />
+          {projectsStatusData.length > 0 ? (
+            <DonutChart
+              data={projectsStatusData}
+              centerValue={stats?.totalProjects || 0}
+              centerLabel="مشروع"
+              height={280}
+              outerRadius={100}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-[280px] text-secondary-400">
+              لا توجد بيانات
+            </div>
+          )}
         </Card>
 
-        {/* Impact Dimensions */}
         <Card>
           <CardHeader
-            title="أبعاد الأثر"
-            subtitle="الأداء الفعلي مقابل المستهدف"
+            title="الإحصائيات العامة"
+            subtitle="ملخص البيانات الرئيسية"
           />
-          <RadarChart
-            data={impactDimensionsData}
-            dataKey="dimension"
-            radars={[
-              { dataKey: 'current', name: 'الحالي', color: '#0ea5e9', fillOpacity: 0.4 },
-              { dataKey: 'target', name: 'المستهدف', color: '#22c55e', fillOpacity: 0.2 },
-            ]}
-            height={280}
-          />
+          <div className="space-y-4 p-6">
+            <div className="flex items-center justify-between p-4 bg-secondary-50 rounded-lg">
+              <div>
+                <p className="text-sm text-secondary-600">إجمالي الاستبيانات</p>
+                <p className="text-2xl font-bold text-secondary-900">{stats?.totalSurveys || 0}</p>
+              </div>
+              <ClipboardDocumentListIcon className="h-10 w-10 text-primary-600" />
+            </div>
+            <div className="flex items-center justify-between p-4 bg-secondary-50 rounded-lg">
+              <div>
+                <p className="text-sm text-secondary-600">إجمالي الإجابات</p>
+                <p className="text-2xl font-bold text-secondary-900">{stats?.totalResponses || 0}</p>
+              </div>
+              <ChartBarIcon className="h-10 w-10 text-success-600" />
+            </div>
+            <div className="flex items-center justify-between p-4 bg-secondary-50 rounded-lg">
+              <div>
+                <p className="text-sm text-secondary-600">المستفيدون</p>
+                <p className="text-2xl font-bold text-secondary-900">{stats?.totalBeneficiaries || 0}</p>
+              </div>
+              <UserGroupIcon className="h-10 w-10 text-purple-600" />
+            </div>
+          </div>
         </Card>
       </div>
 
@@ -197,41 +175,51 @@ export default function DashboardPage() {
             </a>
           }
         />
-        <div className="space-y-4">
-          {recentProjects.map((project) => (
-            <div
-              key={project.id}
-              className="flex items-center gap-4 p-4 bg-secondary-50 rounded-lg"
-            >
-              <div className="flex-1">
-                <h4 className="font-medium text-secondary-900">{project.name}</h4>
-                <div className="mt-2">
-                  <ProgressBar
-                    value={project.progress}
-                    size="sm"
-                    variant={project.status === 'completed' ? 'success' : 'primary'}
-                    showLabel
-                  />
-                </div>
-              </div>
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  project.status === 'active'
-                    ? 'bg-success-50 text-success-700'
-                    : project.status === 'completed'
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'bg-secondary-100 text-secondary-700'
-                }`}
+        {recentProjects.length > 0 ? (
+          <div className="space-y-4">
+            {recentProjects.map((project) => (
+              <div
+                key={project.id}
+                className="flex items-center gap-4 p-4 bg-secondary-50 rounded-lg"
               >
-                {project.status === 'active'
-                  ? 'نشط'
-                  : project.status === 'completed'
-                  ? 'مكتمل'
-                  : 'معلق'}
-              </span>
-            </div>
-          ))}
-        </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-secondary-900">{project.name}</h4>
+                  <div className="mt-2">
+                    <ProgressBar
+                      value={project.progress}
+                      size="sm"
+                      variant={project.status === 'completed' ? 'success' : 'primary'}
+                      showLabel
+                    />
+                  </div>
+                </div>
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    project.status === 'active'
+                      ? 'bg-success-50 text-success-700'
+                      : project.status === 'completed'
+                      ? 'bg-primary-50 text-primary-700'
+                      : project.status === 'suspended'
+                      ? 'bg-warning-50 text-warning-700'
+                      : 'bg-secondary-100 text-secondary-700'
+                  }`}
+                >
+                  {project.status === 'active'
+                    ? 'نشط'
+                    : project.status === 'completed'
+                    ? 'مكتمل'
+                    : project.status === 'suspended'
+                    ? 'معلق'
+                    : 'مسودة'}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-secondary-400">
+            لا توجد مشاريع حالياً
+          </div>
+        )}
       </Card>
     </div>
   );
