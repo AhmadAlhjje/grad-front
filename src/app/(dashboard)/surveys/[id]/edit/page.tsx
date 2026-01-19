@@ -1,13 +1,31 @@
 'use client';
 
-import { Suspense, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useCreateSurvey, useProjects, useAddQuestion } from '@/hooks';
+import {
+  useSurvey,
+  useSurveyQuestions,
+  useUpdateSurvey,
+  useProjects,
+  useAddQuestion,
+  useUpdateQuestion,
+  useDeleteQuestion,
+} from '@/hooks';
 import { PageHeader } from '@/components/layout';
-import { Card, CardHeader, CardFooter, Button, Input, Textarea, Select, Loading } from '@/components/ui';
+import {
+  Card,
+  CardHeader,
+  CardFooter,
+  Button,
+  Input,
+  Textarea,
+  Select,
+  Loading,
+  ErrorState,
+} from '@/components/ui';
 import { QuestionBuilder } from '@/features/surveys/components';
 import type { Question, CreateQuestionData } from '@/types';
 
@@ -37,23 +55,37 @@ const typeOptions = [
   { value: 'feedback', label: 'تغذية راجعة' },
 ];
 
-function NewSurveyContent() {
+const statusOptions = [
+  { value: 'draft', label: 'مسودة' },
+  { value: 'active', label: 'نشط' },
+  { value: 'closed', label: 'مغلق' },
+  { value: 'archived', label: 'مؤرشف' },
+];
+
+export default function EditSurveyPage() {
+  const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const projectIdFromUrl = searchParams.get('project');
+  const id = params.id as string;
 
-  const [step, setStep] = useState(1);
-  const [surveyId, setSurveyId] = useState<string | null>(null);
-  const [localQuestions, setLocalQuestions] = useState<Question[]>([]);
+  const [activeTab, setActiveTab] = useState<'info' | 'questions'>('info');
 
+  const { data: survey, isLoading: surveyLoading, error: surveyError, refetch } = useSurvey(id);
+  const { data: questions, isLoading: questionsLoading } = useSurveyQuestions(id);
   const { data: projectsData } = useProjects({ limit: 100 });
-  const createSurvey = useCreateSurvey();
+  const updateSurvey = useUpdateSurvey();
   const addQuestion = useAddQuestion();
+  const updateQuestion = useUpdateQuestion();
+  const deleteQuestion = useDeleteQuestion();
 
   const projectOptions = projectsData?.map((p) => ({
     value: p._id,
     label: p.name,
   })) || [];
+
+  const formatDateForInput = (dateString: string) => {
+    if (!dateString) return '';
+    return dateString.split('T')[0];
+  };
 
   const {
     register,
@@ -63,99 +95,151 @@ function NewSurveyContent() {
     formState: { errors },
   } = useForm<SurveyFormData>({
     resolver: zodResolver(surveySchema),
-    defaultValues: {
-      title: '',
-      description: '',
-      type: 'pre_evaluation',
-      project: projectIdFromUrl || '',
-      startDate: '',
-      endDate: '',
-      targetResponses: 100,
-      isAnonymous: false,
-      allowMultipleResponses: false,
-      welcomeMessage: '',
-      thankYouMessage: 'شكراً لإكمالك الاستبيان!',
-    },
+    values: survey ? {
+      title: survey.title,
+      description: survey.description,
+      type: survey.type,
+      project: typeof survey.project === 'object' ? survey.project._id : survey.project,
+      startDate: formatDateForInput(survey.startDate),
+      endDate: formatDateForInput(survey.endDate),
+      targetResponses: survey.targetResponses,
+      isAnonymous: survey.isAnonymous,
+      allowMultipleResponses: survey.allowMultipleResponses,
+      welcomeMessage: survey.welcomeMessage || '',
+      thankYouMessage: survey.thankYouMessage || '',
+    } : undefined,
   });
 
-  const onSubmitBasicInfo = async (data: SurveyFormData) => {
+  const onSubmit = async (data: SurveyFormData) => {
     try {
-      const survey = await createSurvey.mutateAsync({
-        ...data,
-        startDate: new Date(data.startDate).toISOString(),
-        endDate: new Date(data.endDate).toISOString(),
-        tags: [],
-        settings: {
-          showProgressBar: true,
-          randomizeQuestions: false,
-          requiredCompletion: true,
-          language: 'ar',
+      await updateSurvey.mutateAsync({
+        id,
+        data: {
+          ...data,
+          startDate: new Date(data.startDate).toISOString(),
+          endDate: new Date(data.endDate).toISOString(),
         },
       });
-      setSurveyId(survey._id);
-      setStep(2);
+      router.push(`/surveys/${id}`);
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const handleStatusChange = async (newStatus: 'draft' | 'active' | 'closed' | 'archived') => {
+    try {
+      await updateSurvey.mutateAsync({
+        id,
+        data: { status: newStatus },
+      });
     } catch {
       // Error handled by mutation
     }
   };
 
   const handleAddQuestion = async (questionData: CreateQuestionData) => {
-    if (!surveyId) return;
-
     try {
-      const question = await addQuestion.mutateAsync({
+      await addQuestion.mutateAsync({
         ...questionData,
-        survey: surveyId,
+        survey: id,
       });
-      setLocalQuestions([...localQuestions, question]);
     } catch {
       // Error handled by mutation
     }
   };
 
-  const handleFinish = () => {
-    router.push(`/surveys/${surveyId}`);
+  const handleUpdateQuestion = async (questionId: string, questionData: Partial<CreateQuestionData>) => {
+    try {
+      await updateQuestion.mutateAsync({
+        id: questionId,
+        data: questionData,
+        surveyId: id,
+      });
+    } catch {
+      // Error handled by mutation
+    }
   };
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (confirm('هل أنت متأكد من حذف هذا السؤال؟')) {
+      try {
+        await deleteQuestion.mutateAsync({
+          id: questionId,
+          surveyId: id,
+        });
+      } catch {
+        // Error handled by mutation
+      }
+    }
+  };
+
+  if (surveyLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loading size="lg" text="جاري تحميل بيانات الاستبيان..." />
+      </div>
+    );
+  }
+
+  if (surveyError || !survey) {
+    return <ErrorState error={surveyError} onRetry={() => refetch()} />;
+  }
 
   return (
     <div>
       <PageHeader
-        title="إنشاء استبيان جديد"
-        subtitle={step === 1 ? 'أدخل المعلومات الأساسية' : 'أضف أسئلة الاستبيان'}
-        backLink="/surveys"
+        title={`تعديل: ${survey.title}`}
+        subtitle="تعديل بيانات الاستبيان وإدارة الأسئلة"
+        backLink={`/surveys/${id}`}
         breadcrumbs={[
           { label: 'الاستبيانات', href: '/surveys' },
-          { label: 'إنشاء استبيان جديد' },
+          { label: survey.title, href: `/surveys/${id}` },
+          { label: 'تعديل' },
         ]}
       />
 
-      {/* Steps Indicator */}
-      <div className="flex items-center gap-4 mb-6">
-        <div
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-            step === 1 ? 'bg-primary-100 text-primary-700' : 'bg-success-50 text-success-700'
+      {/* Tabs */}
+      <div className="flex items-center gap-4 mb-6 border-b border-secondary-200">
+        <button
+          onClick={() => setActiveTab('info')}
+          className={`px-4 py-3 font-medium border-b-2 transition-colors ${
+            activeTab === 'info'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-secondary-500 hover:text-secondary-700'
           }`}
         >
-          <span className="w-6 h-6 rounded-full bg-current/20 flex items-center justify-center text-sm font-medium">
-            1
-          </span>
-          <span className="font-medium">المعلومات الأساسية</span>
-        </div>
-        <div className="h-px w-8 bg-secondary-300" />
-        <div
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-            step === 2 ? 'bg-primary-100 text-primary-700' : 'bg-secondary-100 text-secondary-500'
+          المعلومات الأساسية
+        </button>
+        <button
+          onClick={() => setActiveTab('questions')}
+          className={`px-4 py-3 font-medium border-b-2 transition-colors ${
+            activeTab === 'questions'
+              ? 'border-primary-600 text-primary-600'
+              : 'border-transparent text-secondary-500 hover:text-secondary-700'
           }`}
         >
-          <span className="w-6 h-6 rounded-full bg-current/20 flex items-center justify-center text-sm font-medium">
-            2
-          </span>
-          <span className="font-medium">الأسئلة</span>
-        </div>
+          الأسئلة ({questions?.length || 0})
+        </button>
       </div>
 
-      {step === 1 ? (
-        <form onSubmit={handleSubmit(onSubmitBasicInfo)} className="space-y-6">
+      {activeTab === 'info' ? (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Status */}
+          <Card>
+            <CardHeader title="حالة الاستبيان" />
+            <div className="flex items-center gap-4">
+              <Select
+                options={statusOptions}
+                value={survey.status}
+                onChange={(value) => handleStatusChange(value as 'draft' | 'active' | 'closed' | 'archived')}
+                className="w-48"
+              />
+              <span className="text-sm text-secondary-500">
+                تغيير الحالة سيؤثر على إمكانية تعبئة الاستبيان
+              </span>
+            </div>
+          </Card>
+
           {/* Basic Info */}
           <Card>
             <CardHeader title="المعلومات الأساسية" />
@@ -281,50 +365,33 @@ function NewSurveyContent() {
               <Button type="button" variant="outline" onClick={() => router.back()}>
                 إلغاء
               </Button>
-              <Button type="submit" isLoading={createSurvey.isPending}>
-                التالي: إضافة الأسئلة
+              <Button type="submit" isLoading={updateSurvey.isPending}>
+                حفظ التغييرات
               </Button>
             </CardFooter>
           </Card>
         </form>
       ) : (
-        <div className="space-y-6">
-          <Card>
-            <CardHeader
-              title="أسئلة الاستبيان"
-              subtitle="أضف الأسئلة التي تريد طرحها على المستفيدين"
-            />
+        <Card>
+          <CardHeader
+            title="أسئلة الاستبيان"
+            subtitle="أضف وعدّل أسئلة الاستبيان"
+          />
+          {questionsLoading ? (
+            <Loading text="جاري تحميل الأسئلة..." />
+          ) : (
             <QuestionBuilder
-              surveyId={surveyId!}
-              questions={localQuestions}
+              surveyId={id}
+              questions={questions || []}
               onAddQuestion={handleAddQuestion}
-              onUpdateQuestion={() => {}}
-              onDeleteQuestion={() => {}}
+              onUpdateQuestion={handleUpdateQuestion}
+              onDeleteQuestion={handleDeleteQuestion}
               onReorderQuestions={() => {}}
-              isLoading={addQuestion.isPending}
+              isLoading={addQuestion.isPending || updateQuestion.isPending || deleteQuestion.isPending}
             />
-          </Card>
-
-          <Card>
-            <CardFooter>
-              <Button type="button" variant="outline" onClick={() => setStep(1)}>
-                السابق
-              </Button>
-              <Button onClick={handleFinish} disabled={localQuestions.length === 0}>
-                إنهاء وحفظ الاستبيان
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
+          )}
+        </Card>
       )}
     </div>
-  );
-}
-
-export default function NewSurveyPage() {
-  return (
-    <Suspense fallback={<Loading text="جاري التحميل..." />}>
-      <NewSurveyContent />
-    </Suspense>
   );
 }

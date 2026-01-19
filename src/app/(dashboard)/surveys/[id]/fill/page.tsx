@@ -1,19 +1,15 @@
 'use client';
 
-import { use } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useSurvey, useSurveyQuestions, useSubmitResponse, useSaveDraft } from '@/hooks';
 import { PageHeader } from '@/components/layout';
 import { Card, Loading, ErrorState } from '@/components/ui';
 import { SurveyFillForm } from '@/features/surveys/components/survey-fill-form';
 import type { Answer } from '@/types';
 
-interface SurveyFillPageProps {
-  params: Promise<{ id: string }>;
-}
-
-export default function SurveyFillPage({ params }: SurveyFillPageProps) {
-  const { id } = use(params);
+export default function SurveyFillPage() {
+  const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
 
   const { data: survey, isLoading: surveyLoading, error: surveyError } = useSurvey(id);

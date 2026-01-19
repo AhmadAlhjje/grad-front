@@ -23,6 +23,13 @@ export interface UpdateSurveyData extends Partial<CreateSurveyData> {
 
 export interface UpdateQuestionData extends Partial<CreateQuestionData> {}
 
+// Response wrapper type from backend
+interface ApiResponse<T> {
+  data: T;
+  statusCode: number;
+  message: string;
+}
+
 export const surveysApi = {
   // ============================================
   // Survey CRUD
@@ -33,8 +40,12 @@ export const surveysApi = {
    * GET /surveys
    */
   getAll: async (params?: SurveysListParams): Promise<Survey[]> => {
-    const { data } = await apiClient.get<Survey[]>('/surveys', { params });
-    return data;
+    const { data } = await apiClient.get<ApiResponse<Survey[]> | Survey[]>('/surveys', { params });
+    // Handle both wrapped and unwrapped responses
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return data.data;
   },
 
   /**
@@ -42,8 +53,12 @@ export const surveysApi = {
    * GET /surveys/:id
    */
   getById: async (id: string): Promise<Survey> => {
-    const { data } = await apiClient.get<Survey>(`/surveys/${id}`);
-    return data;
+    const { data } = await apiClient.get<ApiResponse<Survey> | Survey>(`/surveys/${id}`);
+    // Handle both wrapped and unwrapped responses
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Survey;
   },
 
   /**
@@ -51,8 +66,11 @@ export const surveysApi = {
    * POST /surveys
    */
   create: async (surveyData: CreateSurveyData): Promise<Survey> => {
-    const { data } = await apiClient.post<Survey>('/surveys', surveyData);
-    return data;
+    const { data } = await apiClient.post<ApiResponse<Survey> | Survey>('/surveys', surveyData);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Survey;
   },
 
   /**
@@ -60,8 +78,11 @@ export const surveysApi = {
    * PATCH /surveys/:id
    */
   update: async (id: string, surveyData: UpdateSurveyData): Promise<Survey> => {
-    const { data } = await apiClient.patch<Survey>(`/surveys/${id}`, surveyData);
-    return data;
+    const { data } = await apiClient.patch<ApiResponse<Survey> | Survey>(`/surveys/${id}`, surveyData);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Survey;
   },
 
   /**
@@ -81,8 +102,11 @@ export const surveysApi = {
    * GET /surveys/:surveyId/questions
    */
   getQuestions: async (surveyId: string): Promise<Question[]> => {
-    const { data } = await apiClient.get<Question[]>(`/surveys/${surveyId}/questions`);
-    return data;
+    const { data } = await apiClient.get<ApiResponse<Question[]> | Question[]>(`/surveys/${surveyId}/questions`);
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return data.data;
   },
 
   /**
@@ -90,8 +114,11 @@ export const surveysApi = {
    * POST /surveys/questions
    */
   addQuestion: async (questionData: CreateQuestionData): Promise<Question> => {
-    const { data } = await apiClient.post<Question>('/surveys/questions', questionData);
-    return data;
+    const { data } = await apiClient.post<ApiResponse<Question> | Question>('/surveys/questions', questionData);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Question;
   },
 
   /**
@@ -99,8 +126,11 @@ export const surveysApi = {
    * PATCH /surveys/questions/:id
    */
   updateQuestion: async (id: string, questionData: UpdateQuestionData): Promise<Question> => {
-    const { data } = await apiClient.patch<Question>(`/surveys/questions/${id}`, questionData);
-    return data;
+    const { data } = await apiClient.patch<ApiResponse<Question> | Question>(`/surveys/questions/${id}`, questionData);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Question;
   },
 
   /**
@@ -116,10 +146,13 @@ export const surveysApi = {
    * PATCH /surveys/:surveyId/questions/reorder
    */
   reorderQuestions: async (surveyId: string, questionIds: string[]): Promise<Question[]> => {
-    const { data } = await apiClient.patch<Question[]>(`/surveys/${surveyId}/questions/reorder`, {
+    const { data } = await apiClient.patch<ApiResponse<Question[]> | Question[]>(`/surveys/${surveyId}/questions/reorder`, {
       questionIds,
     });
-    return data;
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return data.data;
   },
 
   // ============================================
@@ -131,7 +164,10 @@ export const surveysApi = {
    * GET /surveys/:surveyId/analytics
    */
   getAnalytics: async (surveyId: string): Promise<SurveyAnalytics> => {
-    const { data } = await apiClient.get<SurveyAnalytics>(`/surveys/${surveyId}/analytics`);
-    return data;
+    const { data } = await apiClient.get<ApiResponse<SurveyAnalytics> | SurveyAnalytics>(`/surveys/${surveyId}/analytics`);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as SurveyAnalytics;
   },
 };
