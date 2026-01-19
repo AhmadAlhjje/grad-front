@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { usersApi, type UsersListParams, type CreateUserData, type UpdateUserData } from '@/api';
+import { usersApi, type UsersListParams, type CreateUserData, type UpdateUserData, type UsersResponse } from '@/api';
 import { queryKeys } from '@/lib/query-client';
 import { getErrorMessage } from '@/lib/axios';
 import { notify } from '@/store/ui.store';

@@ -10,7 +10,7 @@ export { activitiesApi } from './activities.api';
 export { beneficiariesApi } from './beneficiaries.api';
 
 // Types exports
-export type { CreateUserData, UpdateUserData, UsersListParams } from './users.api';
+export type { CreateUserData, UpdateUserData, UsersListParams, UsersResponse } from './users.api';
 export type { ProjectsListParams, UpdateProjectData } from './projects.api';
 export type { SurveysListParams, UpdateSurveyData, UpdateQuestionData } from './surveys.api';
 export type { ResponsesListParams } from './responses.api';

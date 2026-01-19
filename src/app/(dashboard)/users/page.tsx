@@ -20,7 +20,6 @@ import {
   TableRow,
   TableHead,
   TableCell,
-  Pagination,
   Loading,
   EmptyState,
   ErrorState,
@@ -68,21 +67,27 @@ const roleColors: Record<string, 'primary' | 'success' | 'default'> = {
 };
 
 export default function UsersPage() {
-  const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const { data, isLoading, error, refetch } = useUsers({
-    page,
-    limit: 10,
-    search: search || undefined,
-  });
+  const { data, isLoading, error, refetch } = useUsers();
 
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
+
+  // Client-side filtering
+  const filteredUsers = data?.data?.filter((user) => {
+    if (!search) return true;
+    const searchLower = search.toLowerCase();
+    return (
+      user.name?.toLowerCase().includes(searchLower) ||
+      user.email?.toLowerCase().includes(searchLower) ||
+      user.phone?.includes(search)
+    );
+  }) || [];
 
   const {
     register,
@@ -181,7 +186,7 @@ export default function UsersPage() {
     <div>
       <PageHeader
         title="إدارة المستخدمين"
-        subtitle={`إجمالي ${data?.total || 0} مستخدم`}
+        subtitle={`إجمالي ${filteredUsers.length} مستخدم`}
         actions={
           <Button onClick={openAddModal} leftIcon={<PlusIcon className="h-5 w-5" />}>
             إضافة مستخدم
@@ -196,10 +201,7 @@ export default function UsersPage() {
             <Input
               placeholder="البحث بالاسم أو البريد الإلكتروني..."
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => setSearch(e.target.value)}
               leftIcon={<MagnifyingGlassIcon className="h-5 w-5" />}
             />
           </div>
@@ -214,15 +216,15 @@ export default function UsersPage() {
           </div>
         ) : error ? (
           <ErrorState onRetry={() => refetch()} />
-        ) : !data?.data?.length ? (
+        ) : !filteredUsers.length ? (
           <EmptyState
-            title="لا يوجد مستخدمون"
-            description="لم يتم العثور على أي مستخدمين."
+            title={search ? "لم يتم العثور على نتائج" : "لا يوجد مستخدمون"}
+            description={search ? "جرب البحث بكلمات مختلفة" : "لم يتم العثور على أي مستخدمين."}
             icon={<UserCircleIcon className="h-8 w-8 text-secondary-400" />}
-            action={{
+            action={!search ? {
               label: 'إضافة مستخدم',
               onClick: openAddModal,
-            }}
+            } : undefined}
           />
         ) : (
           <>
@@ -238,7 +240,7 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.data.map((user) => (
+                {filteredUsers.map((user) => (
                   <TableRow key={user._id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -271,14 +273,14 @@ export default function UsersPage() {
                       <Badge
                         variant={
                           user.status === 'active' ? 'success' :
-                          user.status === 'inactive' ? 'danger' :
-                          'default'
+                            user.status === 'inactive' ? 'danger' :
+                              'default'
                         }
                         dot
                       >
                         {user.status === 'active' ? 'نشط' :
-                         user.status === 'inactive' ? 'غير نشط' :
-                         'معلق'}
+                          user.status === 'inactive' ? 'غير نشط' :
+                            'معلق'}
                       </Badge>
                     </TableCell>
                     <TableCell align="center">
@@ -302,15 +304,7 @@ export default function UsersPage() {
               </TableBody>
             </Table>
 
-            {data.totalPages > 1 && (
-              <Pagination
-                currentPage={page}
-                totalPages={data.totalPages}
-                totalItems={data.total}
-                itemsPerPage={10}
-                onPageChange={setPage}
-              />
-            )}
+
           </>
         )}
       </Card>

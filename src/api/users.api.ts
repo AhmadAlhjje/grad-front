@@ -1,5 +1,11 @@
 import apiClient from '@/lib/axios';
-import type { User, PaginatedResponse } from '@/types';
+import type { User } from '@/types';
+
+// Response types matching actual API
+export interface UsersResponse {
+  data: User[];
+  total: number;
+}
 
 export interface CreateUserData {
   name: string;
@@ -8,7 +14,6 @@ export interface CreateUserData {
   role: 'admin' | 'manager' | 'viewer';
   phone?: string;
   organization?: string;
-  department?: string;
 }
 
 export interface UpdateUserData {
@@ -32,15 +37,22 @@ export const usersApi = {
   /**
    * Get all users
    * GET /users
+   * Returns array of users (axios interceptor unwraps data property)
    */
-  getAll: async (params?: UsersListParams): Promise<PaginatedResponse<User>> => {
-    const { data } = await apiClient.get<PaginatedResponse<User>>('/users', { params });
-    return data;
+  getAll: async (params?: UsersListParams): Promise<UsersResponse> => {
+    const { data } = await apiClient.get<User[]>('/users', { params });
+    // data is already unwrapped by axios interceptor
+    const users = Array.isArray(data) ? data : [];
+    return {
+      data: users,
+      total: users.length,
+    };
   },
 
   /**
    * Get user by ID
    * GET /users/:id
+   * Returns single user (axios interceptor unwraps data property)
    */
   getById: async (id: string): Promise<User> => {
     const { data } = await apiClient.get<User>(`/users/${id}`);
