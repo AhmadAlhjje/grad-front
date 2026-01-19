@@ -1,22 +1,22 @@
 import apiClient from '@/lib/axios';
+import type { Project } from '@/types';
+
+// Response wrapper type from backend
+interface ApiResponse<T> {
+  data: T;
+  statusCode: number;
+  message: string;
+}
 
 export interface Beneficiary {
   _id: string;
-  project: string;
+  project: string | Project;
   name: string;
-  beneficiaryType: 'individual' | 'family' | 'organization' | 'community';
-  email?: string;
-  phone?: string;
+  beneficiaryType: 'person' | 'area' | 'group';
   city?: string;
   region?: string;
-  age?: number;
-  gender?: 'male' | 'female' | 'other';
-  educationLevel?: string;
-  employmentStatus?: string;
-  householdSize?: number;
-  monthlyIncome?: number;
-  tags?: string[];
-  metadata?: Record<string, any>;
+  populationSize?: number;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,19 +24,11 @@ export interface Beneficiary {
 export interface CreateBeneficiaryData {
   project: string;
   name: string;
-  beneficiaryType: 'individual' | 'family' | 'organization' | 'community';
-  email?: string;
-  phone?: string;
+  beneficiaryType: 'person' | 'area' | 'group';
   city?: string;
   region?: string;
-  age?: number;
-  gender?: 'male' | 'female' | 'other';
-  educationLevel?: string;
-  employmentStatus?: string;
-  householdSize?: number;
-  monthlyIncome?: number;
-  tags?: string[];
-  metadata?: Record<string, any>;
+  populationSize?: number;
+  notes?: string;
 }
 
 export interface UpdateBeneficiaryData extends Partial<CreateBeneficiaryData> {}
@@ -48,21 +40,17 @@ export interface BeneficiariesListParams {
   region?: string;
 }
 
+export interface BeneficiaryTypeStats {
+  count: number;
+  totalPopulation: number;
+}
+
 export interface BeneficiaryStatistics {
-  totalBeneficiaries: number;
+  total: number;
   byType: {
-    individual: number;
-    family: number;
-    organization: number;
-    community: number;
-  };
-  byRegion: Record<string, number>;
-  byCity: Record<string, number>;
-  averageAge?: number;
-  genderDistribution?: {
-    male: number;
-    female: number;
-    other: number;
+    person?: BeneficiaryTypeStats;
+    area?: BeneficiaryTypeStats;
+    group?: BeneficiaryTypeStats;
   };
 }
 
@@ -72,8 +60,11 @@ export const beneficiariesApi = {
    * POST /beneficiaries
    */
   create: async (beneficiaryData: CreateBeneficiaryData): Promise<Beneficiary> => {
-    const { data } = await apiClient.post<Beneficiary>('/beneficiaries', beneficiaryData);
-    return data;
+    const { data } = await apiClient.post<ApiResponse<Beneficiary> | Beneficiary>('/beneficiaries', beneficiaryData);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Beneficiary;
   },
 
   /**
@@ -81,8 +72,11 @@ export const beneficiariesApi = {
    * GET /beneficiaries
    */
   getAll: async (params?: BeneficiariesListParams): Promise<Beneficiary[]> => {
-    const { data } = await apiClient.get<Beneficiary[]>('/beneficiaries', { params });
-    return data;
+    const { data } = await apiClient.get<ApiResponse<Beneficiary[]> | Beneficiary[]>('/beneficiaries', { params });
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Beneficiary[];
   },
 
   /**
@@ -90,10 +84,13 @@ export const beneficiariesApi = {
    * GET /beneficiaries/statistics
    */
   getStatistics: async (projectId?: string): Promise<BeneficiaryStatistics> => {
-    const { data } = await apiClient.get<BeneficiaryStatistics>('/beneficiaries/statistics', {
+    const { data } = await apiClient.get<ApiResponse<BeneficiaryStatistics> | BeneficiaryStatistics>('/beneficiaries/statistics', {
       params: projectId ? { projectId } : undefined,
     });
-    return data;
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as BeneficiaryStatistics;
   },
 
   /**
@@ -101,8 +98,11 @@ export const beneficiariesApi = {
    * GET /beneficiaries/project/:projectId
    */
   getByProject: async (projectId: string): Promise<Beneficiary[]> => {
-    const { data } = await apiClient.get<Beneficiary[]>(`/beneficiaries/project/${projectId}`);
-    return data;
+    const { data } = await apiClient.get<ApiResponse<Beneficiary[]> | Beneficiary[]>(`/beneficiaries/project/${projectId}`);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Beneficiary[];
   },
 
   /**
@@ -113,10 +113,13 @@ export const beneficiariesApi = {
     type: string,
     projectId?: string
   ): Promise<Beneficiary[]> => {
-    const { data } = await apiClient.get<Beneficiary[]>(`/beneficiaries/type/${type}`, {
+    const { data } = await apiClient.get<ApiResponse<Beneficiary[]> | Beneficiary[]>(`/beneficiaries/type/${type}`, {
       params: projectId ? { projectId } : undefined,
     });
-    return data;
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Beneficiary[];
   },
 
   /**
@@ -124,10 +127,13 @@ export const beneficiariesApi = {
    * GET /beneficiaries/location
    */
   getByLocation: async (city?: string, region?: string): Promise<Beneficiary[]> => {
-    const { data } = await apiClient.get<Beneficiary[]>('/beneficiaries/location', {
+    const { data } = await apiClient.get<ApiResponse<Beneficiary[]> | Beneficiary[]>('/beneficiaries/location', {
       params: { city, region },
     });
-    return data;
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Beneficiary[];
   },
 
   /**
@@ -135,10 +141,13 @@ export const beneficiariesApi = {
    * GET /beneficiaries/count
    */
   getCount: async (projectId?: string): Promise<{ count: number }> => {
-    const { data } = await apiClient.get<{ count: number }>('/beneficiaries/count', {
+    const { data } = await apiClient.get<ApiResponse<{ count: number }> | { count: number }>('/beneficiaries/count', {
       params: projectId ? { projectId } : undefined,
     });
-    return data;
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as { count: number };
   },
 
   /**
@@ -146,8 +155,11 @@ export const beneficiariesApi = {
    * GET /beneficiaries/:id
    */
   getById: async (id: string): Promise<Beneficiary> => {
-    const { data } = await apiClient.get<Beneficiary>(`/beneficiaries/${id}`);
-    return data;
+    const { data } = await apiClient.get<ApiResponse<Beneficiary> | Beneficiary>(`/beneficiaries/${id}`);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Beneficiary;
   },
 
   /**
@@ -155,8 +167,11 @@ export const beneficiariesApi = {
    * PATCH /beneficiaries/:id
    */
   update: async (id: string, beneficiaryData: UpdateBeneficiaryData): Promise<Beneficiary> => {
-    const { data } = await apiClient.patch<Beneficiary>(`/beneficiaries/${id}`, beneficiaryData);
-    return data;
+    const { data } = await apiClient.patch<ApiResponse<Beneficiary> | Beneficiary>(`/beneficiaries/${id}`, beneficiaryData);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as Beneficiary;
   },
 
   /**

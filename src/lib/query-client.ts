@@ -54,6 +54,8 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.surveys.details(), id] as const,
     questions: (surveyId: string) => [...queryKeys.surveys.all, 'questions', surveyId] as const,
     analytics: (surveyId: string) => [...queryKeys.surveys.all, 'analytics', surveyId] as const,
+    responses: (surveyId: string) => [...queryKeys.surveys.all, 'responses', surveyId] as const,
+    response: (responseId: string) => [...queryKeys.surveys.all, 'response', responseId] as const,
   },
 
   // Survey Responses

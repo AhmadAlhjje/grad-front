@@ -9,6 +9,13 @@ export interface ResponsesListParams {
   endDate?: string;
 }
 
+// Response wrapper type from backend
+interface ApiResponse<T> {
+  data: T;
+  statusCode: number;
+  message: string;
+}
+
 export const responsesApi = {
   /**
    * Get survey responses
@@ -17,12 +24,15 @@ export const responsesApi = {
   getBySurvey: async (
     surveyId: string,
     params?: ResponsesListParams
-  ): Promise<PaginatedResponse<SurveyResponse>> => {
-    const { data } = await apiClient.get<PaginatedResponse<SurveyResponse>>(
+  ): Promise<SurveyResponse[]> => {
+    const { data } = await apiClient.get<ApiResponse<SurveyResponse[]> | SurveyResponse[]>(
       `/surveys/${surveyId}/responses`,
       { params }
     );
-    return data;
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as SurveyResponse[];
   },
 
   /**
@@ -30,8 +40,11 @@ export const responsesApi = {
    * GET /surveys/responses/:id
    */
   getById: async (id: string): Promise<SurveyResponse> => {
-    const { data } = await apiClient.get<SurveyResponse>(`/surveys/responses/${id}`);
-    return data;
+    const { data } = await apiClient.get<ApiResponse<SurveyResponse> | SurveyResponse>(`/surveys/responses/${id}`);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as SurveyResponse;
   },
 
   /**

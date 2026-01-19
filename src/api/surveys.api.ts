@@ -5,6 +5,7 @@ import type {
   CreateSurveyData,
   CreateQuestionData,
   SurveyAnalytics,
+  SurveyResponse,
   PaginatedResponse,
 } from '@/types';
 
@@ -42,10 +43,10 @@ export const surveysApi = {
   getAll: async (params?: SurveysListParams): Promise<Survey[]> => {
     const { data } = await apiClient.get<ApiResponse<Survey[]> | Survey[]>('/surveys', { params });
     // Handle both wrapped and unwrapped responses
-    if (Array.isArray(data)) {
-      return data;
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
     }
-    return data.data;
+    return data as Survey[];
   },
 
   /**
@@ -103,10 +104,10 @@ export const surveysApi = {
    */
   getQuestions: async (surveyId: string): Promise<Question[]> => {
     const { data } = await apiClient.get<ApiResponse<Question[]> | Question[]>(`/surveys/${surveyId}/questions`);
-    if (Array.isArray(data)) {
-      return data;
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
     }
-    return data.data;
+    return data as Question[];
   },
 
   /**
@@ -149,10 +150,10 @@ export const surveysApi = {
     const { data } = await apiClient.patch<ApiResponse<Question[]> | Question[]>(`/surveys/${surveyId}/questions/reorder`, {
       questionIds,
     });
-    if (Array.isArray(data)) {
-      return data;
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
     }
-    return data.data;
+    return data as Question[];
   },
 
   // ============================================
@@ -169,5 +170,33 @@ export const surveysApi = {
       return data.data;
     }
     return data as SurveyAnalytics;
+  },
+
+  // ============================================
+  // Responses
+  // ============================================
+
+  /**
+   * Get survey responses
+   * GET /surveys/:surveyId/responses
+   */
+  getResponses: async (surveyId: string): Promise<SurveyResponse[]> => {
+    const { data } = await apiClient.get<ApiResponse<SurveyResponse[]> | SurveyResponse[]>(`/surveys/${surveyId}/responses`);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as SurveyResponse[];
+  },
+
+  /**
+   * Get response by ID
+   * GET /surveys/responses/:responseId
+   */
+  getResponseById: async (responseId: string): Promise<SurveyResponse> => {
+    const { data } = await apiClient.get<ApiResponse<SurveyResponse> | SurveyResponse>(`/surveys/responses/${responseId}`);
+    if ('data' in data && 'statusCode' in data) {
+      return data.data;
+    }
+    return data as SurveyResponse;
   },
 };

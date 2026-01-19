@@ -253,9 +253,12 @@ export interface SurveyResponse extends BaseEntity {
   survey: string | Survey;
   respondent?: string | User;
   answers: Answer[];
-  status: 'draft' | 'submitted';
+  status: 'draft' | 'submitted' | 'completed';
   completionTime?: number;
-  language: 'ar' | 'en';
+  completionPercentage?: number;
+  startedAt?: string;
+  completedAt?: string;
+  language?: 'ar' | 'en';
   metadata?: {
     deviceType?: string;
     browser?: string;
