@@ -1,7 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { authApi } from '@/api/auth.api';
+import { usersApi } from '@/api/users.api';
 import { useAuthStore } from '@/store';
+import { notify } from '@/store/ui.store';
+import { getErrorMessage } from '@/lib/axios';
 import { PageHeader } from '@/components/layout';
 import {
   Card,
@@ -11,6 +16,7 @@ import {
   Button,
   Select,
   Badge,
+  Loading,
 } from '@/components/ui';
 import {
   UserCircleIcon,
@@ -39,17 +45,50 @@ const timezoneOptions = [
 ];
 
 export default function SettingsPage() {
-  const { user } = useAuthStore();
+  const { setUser } = useAuthStore();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('profile');
+
+  // Fetch profile from API
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => authApi.getProfile(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Update profile mutation
+  const updateProfile = useMutation({
+    mutationFn: (data: { name?: string; phone?: string; organization?: string }) =>
+      usersApi.update(profile!._id, data),
+    onSuccess: (updatedUser) => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setUser(updatedUser);
+      notify.success('تم تحديث الملف الشخصي بنجاح');
+    },
+    onError: (error) => {
+      notify.error('فشل تحديث الملف الشخصي', getErrorMessage(error));
+    },
+  });
 
   // Form states
   const [profileData, setProfileData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    jobTitle: '',
-    organization: user?.organization || '',
+    name: '',
+    email: '',
+    phone: '',
+    organization: '',
   });
+
+  // Update form when profile is loaded
+  useEffect(() => {
+    if (profile) {
+      setProfileData({
+        name: profile.name || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        organization: profile.organization || '',
+      });
+    }
+  }, [profile]);
 
   const [preferences, setPreferences] = useState({
     language: 'ar',
@@ -64,6 +103,28 @@ export default function SettingsPage() {
     weeklyReports: false,
     systemAlerts: true,
   });
+
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?._id) return;
+
+    updateProfile.mutate({
+      name: profileData.name,
+      phone: profileData.phone,
+      organization: profileData.organization,
+    });
+  };
+
+  const handleResetProfile = () => {
+    if (profile) {
+      setProfileData({
+        name: profile.name || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        organization: profile.organization || '',
+      });
+    }
+  };
 
   const tabs = [
     { id: 'profile', label: 'الملف الشخصي', icon: UserCircleIcon },
@@ -90,11 +151,10 @@ export default function SettingsPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-start transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-primary-50 text-primary-700 font-medium'
-                        : 'text-secondary-600 hover:bg-secondary-50'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-start transition-colors ${activeTab === tab.id
+                      ? 'bg-primary-50 text-primary-700 font-medium'
+                      : 'text-secondary-600 hover:bg-secondary-50'
+                      }`}
                   >
                     <Icon className="h-5 w-5" />
                     <span>{tab.label}</span>
@@ -115,64 +175,56 @@ export default function SettingsPage() {
                 subtitle="معلوماتك الشخصية وبيانات الحساب"
                 action={
                   <Badge variant="primary" size="lg">
-                    {user?.role === 'admin' ? 'مدير' : user?.role === 'manager' ? 'مشرف' : 'عارض'}
+                    {profile?.role === 'admin' ? 'مدير' : profile?.role === 'manager' ? 'مشرف' : 'مشاهد'}
                   </Badge>
                 }
               />
-              <form className="space-y-6">
-                <div className="flex items-center gap-6 pb-6 border-b border-secondary-200">
-                  <div className="w-24 h-24 rounded-full bg-primary-100 flex items-center justify-center">
-                    <UserCircleIcon className="h-16 w-16 text-primary-600" />
-                  </div>
-                  <div>
-                    <Button variant="outline" size="sm">
-                      تغيير الصورة
-                    </Button>
-                    <p className="text-sm text-secondary-500 mt-2">
-                      JPG, PNG أو GIF. الحد الأقصى 2MB
-                    </p>
-                  </div>
+              {profileLoading ? (
+                <div className="p-8">
+                  <Loading text="جاري تحميل البيانات..." />
                 </div>
+              ) : (
+                <form onSubmit={handleSaveProfile} className="space-y-6">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                      <Input
+                        label="الاسم الكامل"
+                        value={profileData.name}
+                        onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                      />
+                    </div>
                     <Input
-                      label="الاسم الكامل"
-                      value={profileData.name}
-                      onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                      label="البريد الإلكتروني"
+                      type="email"
+                      value={profileData.email}
+                      disabled
+                      helperText="لا يمكن تغيير البريد الإلكتروني"
+                    />
+                    <Input
+                      label="رقم الهاتف"
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                      placeholder="+966501234567"
+                    />
+                    <Input
+                      label="المنظمة"
+                      value={profileData.organization}
+                      onChange={(e) => setProfileData({ ...profileData, organization: e.target.value })}
+                      placeholder="اسم المنظمة"
                     />
                   </div>
-                  <Input
-                    label="البريد الإلكتروني"
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                  />
-                  <Input
-                    label="رقم الهاتف"
-                    value={profileData.phone}
-                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                    placeholder="05xxxxxxxx"
-                  />
-                  <Input
-                    label="المسمى الوظيفي"
-                    value={profileData.jobTitle}
-                    onChange={(e) => setProfileData({ ...profileData, jobTitle: e.target.value })}
-                    placeholder="مدير مشاريع"
-                  />
-                  <Input
-                    label="المنظمة"
-                    value={profileData.organization}
-                    onChange={(e) => setProfileData({ ...profileData, organization: e.target.value })}
-                    placeholder="اسم المنظمة"
-                  />
-                </div>
 
-                <CardFooter>
-                  <Button variant="outline">إلغاء</Button>
-                  <Button>حفظ التغييرات</Button>
-                </CardFooter>
-              </form>
+                  <CardFooter>
+                    <Button type="button" variant="outline" onClick={handleResetProfile}>
+                      إلغاء
+                    </Button>
+                    <Button type="submit" isLoading={updateProfile.isPending}>
+                      حفظ التغييرات
+                    </Button>
+                  </CardFooter>
+                </form>
+              )}
             </Card>
           )}
 

@@ -37,7 +37,6 @@ export interface User extends BaseEntity {
   department?: string;
   role: UserRole;
   status: UserStatus;
-  avatar?: string;
   lastLoginAt?: string;
   emailVerified?: boolean;
 }
