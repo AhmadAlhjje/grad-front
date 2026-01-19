@@ -33,13 +33,13 @@ export default function DashboardPage() {
   const activeProjects = projectsList.filter((p) => p.status === 'active').length;
   const completedProjects = projectsList.filter((p) => p.status === 'completed').length;
   const draftProjects = projectsList.filter((p) => p.status === 'draft').length;
-  const suspendedProjects = projectsList.filter((p) => p.status === 'suspended').length;
+  const archivedProjects = projectsList.filter((p) => p.status === 'archived').length;
 
   // Projects status for donut chart
   const projectsStatusData = [
     { name: 'مكتملة', value: completedProjects, color: '#22c55e' },
     { name: 'نشطة', value: activeProjects, color: '#0ea5e9' },
-    { name: 'معلقة', value: suspendedProjects, color: '#f59e0b' },
+    { name: 'مؤرشفة', value: archivedProjects, color: '#f59e0b' },
     { name: 'مسودة', value: draftProjects, color: '#94a3b8' },
   ].filter(item => item.value > 0);
 
@@ -49,8 +49,9 @@ export default function DashboardPage() {
     name: project.name,
     status: project.status,
     progress: project.status === 'completed' ? 100 :
-              project.status === 'active' ? 60 :
-              project.status === 'draft' ? 20 : 45,
+      project.status === 'active' ? 60 :
+        project.status === 'draft' ? 20 :
+          project.status === 'archived' ? 100 : 45,
   }));
 
   if (isLoading) {
@@ -194,23 +195,22 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    project.status === 'active'
-                      ? 'bg-success-50 text-success-700'
-                      : project.status === 'completed'
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${project.status === 'active'
+                    ? 'bg-success-50 text-success-700'
+                    : project.status === 'completed'
                       ? 'bg-primary-50 text-primary-700'
-                      : project.status === 'suspended'
-                      ? 'bg-warning-50 text-warning-700'
-                      : 'bg-secondary-100 text-secondary-700'
-                  }`}
+                      : project.status === 'archived'
+                        ? 'bg-warning-50 text-warning-700'
+                        : 'bg-secondary-100 text-secondary-700'
+                    }`}
                 >
                   {project.status === 'active'
                     ? 'نشط'
                     : project.status === 'completed'
-                    ? 'مكتمل'
-                    : project.status === 'suspended'
-                    ? 'معلق'
-                    : 'مسودة'}
+                      ? 'مكتمل'
+                      : project.status === 'archived'
+                        ? 'مؤرشف'
+                        : 'مسودة'}
                 </span>
               </div>
             ))}
